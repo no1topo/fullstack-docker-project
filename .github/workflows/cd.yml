@@ -102,14 +102,13 @@ jobs:
         working-directory: terraform
         run: |
           terraform init \
-            -chdir=environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }} \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
             -backend-config="key=${{ github.ref == 'refs/heads/main' && 'prod/terraform.tfstate' || 'dev/terraform.tfstate' }}" \
             -backend-config="region=${{ secrets.AWS_REGION }}"
 
       - name: Terraform Plan
         working-directory: terraform
-        run: terraform plan -chdir=environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }} -var-file="terraform.tfvars" -out=tfplan
+        run: terraform plan -var-file="environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfvars" -out=tfplan
         env:
           TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
           TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
@@ -117,7 +116,7 @@ jobs:
       - name: Terraform Apply
         if: github.event_name == 'push'
         working-directory: terraform
-        run: terraform apply -chdir=environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }} -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
       - name: Get ALB DNS
         id: alb
