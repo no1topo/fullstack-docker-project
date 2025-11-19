@@ -1,0 +1,102 @@
+name: CI - Lint & Test
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  backend-lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.16'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          working-directory: backend
+          version: latest
+
+      - name: Run Go tests
+        working-directory: backend
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage.out
+          flags: backend
+
+  frontend-lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint frontend code
+        working-directory: frontend
+        run: npm run lint || true  # Frontend may not have lint script
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          REACT_APP_BACKEND_URL: /api
+        run: npm run build
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive terraform/
+
+      - name: Terraform init (dev)
+        working-directory: terraform/environments/dev
+        run: terraform init -backend=false
+
+      - name: Terraform validate (dev)
+        working-directory: terraform/environments/dev
+        run: terraform validate
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Trivy vulnerability scanner on Dockerfiles
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'

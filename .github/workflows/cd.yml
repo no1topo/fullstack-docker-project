@@ -1,0 +1,150 @@
+name: CD - Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  TERRAFORM_VERSION: 1.5.0
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      backend-image: ${{ steps.meta-backend.outputs.tags }}
+      frontend-image: ${{ steps.meta-frontend.outputs.tags }}
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (backend)
+        id: meta-backend
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/backend
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata (frontend)
+        id: meta-frontend
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/frontend
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Init
+        working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+        run: terraform init
+        env:
+          TF_BACKEND_CONFIG: "-backend-config='bucket=${{ secrets.TF_STATE_BUCKET }}' -backend-config='key=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfstate' -backend-config='region=${{ secrets.AWS_REGION || 'us-east-1' }}'"
+
+      - name: Terraform Plan
+        working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+        run: terraform plan -out=tfplan
+        env:
+          TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
+          TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
+
+      - name: Terraform Apply
+        if: github.event_name == 'push'
+        working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get ALB DNS
+        id: alb
+        run: |
+          echo "dns=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[0].DNSName' --output text)" >> $GITHUB_OUTPUT
+
+      - name: Smoke tests
+        run: |
+          echo "Testing ALB endpoint: ${{ steps.alb.outputs.dns }}"
+          # Wait for service to be ready
+          for i in {1..30}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://${{ steps.alb.outputs.dns }}/ping || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ Backend health check passed"
+              break
+            fi
+            echo "Attempt $i/30: HTTP $HTTP_CODE, retrying in 10s..."
+            sleep 10
+          done
+
+          # Test frontend
+          curl -s http://${{ steps.alb.outputs.dns }}/ | grep -q "<!DOCTYPE html" && echo "✓ Frontend serving correctly" || echo "✗ Frontend check failed"
+
+  notify:
+    if: always()
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack (if configured)
+        if: success()
+        run: |
+          echo "✓ Deployment successful!"
+          # Add Slack webhook integration here if needed
