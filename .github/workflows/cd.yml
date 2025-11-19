@@ -100,13 +100,15 @@ jobs:
 
       - name: Terraform Init
         working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-        run: terraform init
-        env:
-          TF_BACKEND_CONFIG: "-backend-config='bucket=${{ secrets.TF_STATE_BUCKET }}' -backend-config='key=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfstate' -backend-config='region=${{ secrets.AWS_REGION || 'us-east-1' }}'"
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=${{ github.ref == 'refs/heads/main' && 'prod/terraform.tfstate' || 'dev/terraform.tfstate' }}" \
+            -backend-config="region=${{ secrets.AWS_REGION }}"
 
       - name: Terraform Plan
         working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-        run: terraform plan -out=tfplan
+        run: terraform plan -var-file="terraform.tfvars" -out=tfplan
         env:
           TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
           TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
