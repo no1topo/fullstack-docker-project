@@ -28,7 +28,7 @@ provider "aws" {
 
 # VPC and Networking
 module "vpc" {
-  source = "../modules/vpc"
+  source = "./modules/vpc"
 
   project_name         = var.project_name
   environment          = var.environment
@@ -41,7 +41,7 @@ module "vpc" {
 
 # ECR Repositories
 module "ecr" {
-  source = "../modules/ecr"
+  source = "./modules/ecr"
 
   project_name = var.project_name
   environment  = var.environment
@@ -52,7 +52,7 @@ module "ecr" {
 
 # RDS PostgreSQL
 module "rds" {
-  source = "../modules/rds"
+  source = "./modules/rds"
 
   project_name           = var.project_name
   environment            = var.environment
@@ -67,7 +67,7 @@ module "rds" {
 
 # ElastiCache Redis
 module "redis" {
-  source = "../modules/redis"
+  source = "./modules/redis"
 
   project_name           = var.project_name
   environment            = var.environment
@@ -80,7 +80,7 @@ module "redis" {
 
 # Security Groups
 module "security_groups" {
-  source = "../modules/security_groups"
+  source = "./modules/security_groups"
 
   project_name = var.project_name
   environment  = var.environment
@@ -91,7 +91,7 @@ module "security_groups" {
 
 # Application Load Balancer
 module "alb" {
-  source = "../modules/alb"
+  source = "./modules/alb"
 
   project_name           = var.project_name
   environment            = var.environment
@@ -104,7 +104,7 @@ module "alb" {
 
 # IAM Roles
 module "iam" {
-  source = "../modules/iam"
+  source = "./modules/iam"
 
   project_name = var.project_name
   environment  = var.environment
@@ -114,7 +114,7 @@ module "iam" {
 
 # ECS Cluster
 module "ecs" {
-  source = "../modules/ecs"
+  source = "./modules/ecs"
 
   project_name                = var.project_name
   environment                 = var.environment
@@ -126,7 +126,7 @@ module "ecs" {
 
 # ECS Backend Service
 module "ecs_backend" {
-  source = "../modules/ecs_service"
+  source = "./modules/ecs_service"
 
   project_name              = var.project_name
   environment               = var.environment
@@ -161,7 +161,7 @@ module "ecs_backend" {
 
 # ECS Frontend Service
 module "ecs_frontend" {
-  source = "../modules/ecs_service"
+  source = "./modules/ecs_service"
 
   project_name              = var.project_name
   environment               = var.environment
@@ -189,7 +189,7 @@ module "ecs_frontend" {
 
 # Auto Scaling for Backend
 module "autoscaling" {
-  source = "../modules/autoscaling"
+  source = "./modules/autoscaling"
 
   project_name            = var.project_name
   environment             = var.environment
@@ -204,7 +204,7 @@ module "autoscaling" {
 
 # CloudWatch Logs and Monitoring
 module "cloudwatch" {
-  source = "../modules/cloudwatch"
+  source = "./modules/cloudwatch"
 
   project_name = var.project_name
   environment  = var.environment

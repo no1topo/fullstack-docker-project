@@ -99,24 +99,25 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Init
-        working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+        working-directory: terraform
         run: |
           terraform init \
+            -chdir=environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }} \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
             -backend-config="key=${{ github.ref == 'refs/heads/main' && 'prod/terraform.tfstate' || 'dev/terraform.tfstate' }}" \
             -backend-config="region=${{ secrets.AWS_REGION }}"
 
       - name: Terraform Plan
-        working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-        run: terraform plan -var-file="terraform.tfvars" -out=tfplan
+        working-directory: terraform
+        run: terraform plan -chdir=environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }} -var-file="terraform.tfvars" -out=tfplan
         env:
           TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
           TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
 
       - name: Terraform Apply
         if: github.event_name == 'push'
-        working-directory: terraform/environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-        run: terraform apply -auto-approve tfplan
+        working-directory: terraform
+        run: terraform apply -chdir=environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }} -auto-approve tfplan
 
       - name: Get ALB DNS
         id: alb
