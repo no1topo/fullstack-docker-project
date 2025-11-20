@@ -174,14 +174,34 @@ if [[ -n "$EIP_ALLOC_ID" && "$EIP_ALLOC_ID" != "None" ]]; then
   add_import "module.vpc.aws_eip.nat[0]" "$EIP_ALLOC_ID"
 fi
 
-NAT_TAG_NAME="${PROJECT_NAME}-${ENV}-nat-1"
-NAT_ID=$(aws ec2 describe-nat-gateways \
+# Try to import NAT only if we can confidently resolve it in our VPC and subnet
+VPC_NAME_TAG="${PROJECT_NAME}-${ENV}-vpc"
+VPC_ID_TF=$(aws ec2 describe-vpcs \
   --region "$AWS_REGION" \
-  --filter "Name=tag:Name,Values=${NAT_TAG_NAME}" \
-  --query 'NatGateways[0].NatGatewayId' \
+  --filters "Name=tag:Name,Values=${VPC_NAME_TAG}" \
+  --query 'Vpcs[0].VpcId' \
   --output text 2>/dev/null || true)
-if [[ -n "$NAT_ID" && "$NAT_ID" != "None" ]]; then
-  add_import "module.vpc.aws_nat_gateway.main[0]" "$NAT_ID"
+
+SUBNET1_NAME_TAG="${PROJECT_NAME}-${ENV}-public-subnet-1"
+SUBNET1_ID=$(aws ec2 describe-subnets \
+  --region "$AWS_REGION" \
+  --filters "Name=tag:Name,Values=${SUBNET1_NAME_TAG}" \
+  --query 'Subnets[0].SubnetId' \
+  --output text 2>/dev/null || true)
+
+if [[ -n "$VPC_ID_TF" && "$VPC_ID_TF" != "None" && -n "$SUBNET1_ID" && "$SUBNET1_ID" != "None" ]]; then
+  NAT_ID=$(aws ec2 describe-nat-gateways \
+    --region "$AWS_REGION" \
+    --filter "Name=vpc-id,Values=${VPC_ID_TF}" "Name=subnet-id,Values=${SUBNET1_ID}" \
+    --query 'NatGateways[?State==`available`][0].NatGatewayId' \
+    --output text 2>/dev/null || true)
+  if [[ -n "$NAT_ID" && "$NAT_ID" != "None" ]]; then
+    add_import "module.vpc.aws_nat_gateway.main[0]" "$NAT_ID"
+  else
+    echo "  [=] skip NAT import (no NAT in VPC ${VPC_ID_TF} subnet ${SUBNET1_ID})"
+  fi
+else
+  echo "  [=] skip NAT import (unable to resolve VPC/subnet by tags)"
 fi
 
 # Write a newline at end (terraform tolerant either way)
