@@ -135,7 +135,7 @@ module "ecs_backend" {
   cluster_id                = module.ecs.cluster_id
   cluster_name              = module.ecs.cluster_name
   task_family               = "${var.project_name}-backend"
-  ecr_image_uri             = "${module.ecr.backend_image_uri}:latest"
+  ecr_image_uri             = coalesce(var.backend_image_uri, "${module.ecr.backend_image_uri}:latest")
   container_port            = var.container_port_backend
   task_cpu                  = var.backend_cpu
   task_memory               = var.backend_memory
@@ -170,7 +170,7 @@ module "ecs_frontend" {
   cluster_id                = module.ecs.cluster_id
   cluster_name              = module.ecs.cluster_name
   task_family               = "${var.project_name}-frontend"
-  ecr_image_uri             = "${module.ecr.frontend_image_uri}:latest"
+  ecr_image_uri             = coalesce(var.frontend_image_uri, "${module.ecr.frontend_image_uri}:latest")
   container_port            = var.container_port_frontend
   task_cpu                  = var.frontend_cpu
   task_memory               = var.frontend_memory

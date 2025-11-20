@@ -111,3 +111,17 @@ variable "common_tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)
 }
+
+// Optional image URIs to decouple registry from ECR module
+// When null, defaults to ECR repositories created by module.ecr with :latest
+variable "backend_image_uri" {
+  description = "Full image URI for backend (e.g., ghcr.io/owner/repo/backend:tag or account.dkr.ecr.us-east-1.amazonaws.com/repo:tag)"
+  type        = string
+  default     = null
+}
+
+variable "frontend_image_uri" {
+  description = "Full image URI for frontend (e.g., ghcr.io/owner/repo/frontend:tag or account.dkr.ecr.us-east-1.amazonaws.com/repo:tag)"
+  type        = string
+  default     = null
+}
