@@ -111,7 +111,8 @@ jobs:
 
       - name: Import existing AWS resources into state
         working-directory: terraform
-        run: ./import-existing-resources.sh .
+        run: |
+          ./import-existing-resources.sh .
         env:
           AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}

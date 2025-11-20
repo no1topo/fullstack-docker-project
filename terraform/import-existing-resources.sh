@@ -36,7 +36,7 @@ for ADDR in "${!IMPORTS[@]}"; do
   ID="${IMPORTS[$ADDR]}"
   echo "  [IMPORT] $ADDR <- $ID"
 
-  if terraform import -no-color "$ADDR" "$ID" 2>&1; then
+  if terraform import -no-color -input=false "$ADDR" "$ID" 2>&1; then
     echo "    ✓ Successfully imported"
     ((IMPORT_COUNT++))
   else
