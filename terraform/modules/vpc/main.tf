@@ -45,7 +45,7 @@ resource "aws_subnet" "private" {
 
 # Elastic IPs for NAT Gateways
 resource "aws_eip" "nat" {
-  count  = length(var.public_subnet_cidrs)
+  count  = var.single_nat_gateway ? 1 : length(var.public_subnet_cidrs)
   domain = "vpc"
 
   tags = merge(var.tags, {
@@ -61,9 +61,9 @@ resource "aws_eip" "nat" {
 
 # NAT Gateways
 resource "aws_nat_gateway" "main" {
-  count         = length(var.public_subnet_cidrs)
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
+  count         = var.single_nat_gateway ? 1 : length(var.public_subnet_cidrs)
+  allocation_id = aws_eip.nat[var.single_nat_gateway ? 0 : count.index].id
+  subnet_id     = aws_subnet.public[var.single_nat_gateway ? 0 : count.index].id
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-nat-${count.index + 1}"
@@ -110,7 +110,7 @@ resource "aws_route" "private_nat" {
   count                  = length(var.private_subnet_cidrs)
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.main[count.index].id
+  nat_gateway_id         = aws_nat_gateway.main[var.single_nat_gateway ? 0 : count.index].id
 }
 
 # Private Subnet Route Table Associations

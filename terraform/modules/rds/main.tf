@@ -14,7 +14,7 @@ resource "aws_db_instance" "postgres" {
   db_subnet_group_name    = var.db_subnet_group_name
   vpc_security_group_ids  = var.vpc_security_group_ids
   backup_retention_period = var.backup_retention_days
-  multi_az                = var.environment != "dev" ? true : false
+  multi_az                = var.multi_az
   skip_final_snapshot     = var.environment == "dev" ? true : false
   copy_tags_to_snapshot   = true
   enabled_cloudwatch_logs_exports = ["postgresql"]

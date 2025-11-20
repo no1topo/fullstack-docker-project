@@ -112,6 +112,14 @@ variable "common_tags" {
   type        = map(string)
 }
 
+// Control RDS Multi-AZ (override default behavior). When null, defaults to
+// true for non-dev and false for dev.
+variable "rds_multi_az" {
+  description = "Enable Multi-AZ for RDS (true/false). Null = default by env."
+  type        = bool
+  default     = null
+}
+
 // Optional image URIs to decouple registry from ECR module
 // When null, defaults to ECR repositories created by module.ecr with :latest
 variable "backend_image_uri" {

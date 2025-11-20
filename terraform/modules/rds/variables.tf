@@ -29,3 +29,8 @@ variable "db_subnet_group_name" {
 variable "tags" {
   type = map(string)
 }
+
+variable "multi_az" {
+  description = "Whether to enable Multi-AZ for RDS"
+  type        = bool
+}

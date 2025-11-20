@@ -18,6 +18,12 @@ variable "public_subnet_cidrs" {
   type = list(string)
 }
 
+variable "single_nat_gateway" {
+  description = "Use a single NAT Gateway for all private subnets to reduce EIP usage"
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   type = map(string)
 }

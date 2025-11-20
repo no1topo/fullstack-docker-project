@@ -36,6 +36,7 @@ module "vpc" {
   vpc_cidr             = var.vpc_cidr
   private_subnet_cidrs = var.private_subnet_cidrs
   public_subnet_cidrs  = var.public_subnet_cidrs
+  single_nat_gateway   = true
 
   tags = var.common_tags
 }
@@ -62,6 +63,7 @@ module "rds" {
   backup_retention_days  = var.rds_backup_retention
   vpc_security_group_ids = [module.security_groups.rds_sg_id]
   db_subnet_group_name   = module.vpc.db_subnet_group_name
+  multi_az               = coalesce(var.rds_multi_az, var.environment != "dev")
 
   tags = var.common_tags
 }

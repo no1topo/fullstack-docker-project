@@ -14,8 +14,8 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     outputs:
-      backend-image: ${{ steps.meta-backend.outputs.tags }}
-      frontend-image: ${{ steps.meta-frontend.outputs.tags }}
+      backend-image: ${{ steps.select-backend-tag.outputs.tag }}
+      frontend-image: ${{ steps.select-frontend-tag.outputs.tag }}
     permissions:
       contents: read
       packages: write
@@ -54,6 +54,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Select single backend tag
+        id: select-backend-tag
+        run: |
+          FIRST_TAG="$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n1)"
+          echo "Using backend image tag: ${FIRST_TAG}"
+          echo "tag=${FIRST_TAG}" >> $GITHUB_OUTPUT
+
       - name: Extract metadata (frontend)
         id: meta-frontend
         uses: docker/metadata-action@v4
@@ -74,6 +81,13 @@ jobs:
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Select single frontend tag
+        id: select-frontend-tag
+        run: |
+          FIRST_TAG="$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n1)"
+          echo "Using frontend image tag: ${FIRST_TAG}"
+          echo "tag=${FIRST_TAG}" >> $GITHUB_OUTPUT
 
   deploy:
     needs: build-and-push
