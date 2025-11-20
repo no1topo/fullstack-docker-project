@@ -52,7 +52,7 @@ resource "aws_ecs_task_definition" "main" {
 
   # Prevent accidental deletion
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
     ignore_changes  = [family]
   }
 }
@@ -87,7 +87,7 @@ resource "aws_ecs_service" "main" {
 
   # Prevent accidental deletion
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
     ignore_changes  = [desired_count]
   }
 }

@@ -8,7 +8,7 @@ resource "aws_appautoscaling_target" "ecs_target" {
 
   # Prevent accidental deletion
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 

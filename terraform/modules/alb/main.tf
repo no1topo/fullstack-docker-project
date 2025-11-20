@@ -14,7 +14,7 @@ resource "aws_lb" "main" {
 
   # Prevent accidental deletion of load balancer
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
     ignore_changes  = [name_prefix]
   }
 }

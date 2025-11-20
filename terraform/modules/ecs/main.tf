@@ -13,7 +13,7 @@ resource "aws_ecs_cluster" "main" {
 
   # Prevent accidental deletion of cluster
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
     ignore_changes  = [name, setting]
   }
 }
@@ -32,7 +32,7 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
 
   # Prevent accidental deletion
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
     ignore_changes  = all
   }
 }

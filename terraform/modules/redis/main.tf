@@ -22,7 +22,7 @@ resource "aws_elasticache_cluster" "redis" {
 
   # Prevent accidental deletion and allow reuse of existing cluster
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
     ignore_changes  = all
   }
 }

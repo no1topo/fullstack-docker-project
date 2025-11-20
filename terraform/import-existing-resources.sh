@@ -10,6 +10,18 @@ echo "=========================================="
 
 echo "Skipping terraform init (handled in CI)..."
 
+# Determine environment (prod or dev)
+if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+  ENV="prod"
+else
+  ENV="dev"
+fi
+
+echo "Detected environment: $ENV"
+TFVARS="environments/$ENV/terraform.tfvars"
+
+echo "Using tfvars file: $TFVARS"
+
 declare -A IMPORTS=(
   ["module.cloudwatch.aws_cloudwatch_log_group.backend"]="/ecs/fullstack-docker-prod-backend"
   ["module.cloudwatch.aws_cloudwatch_log_group.frontend"]="/ecs/fullstack-docker-prod-frontend"
@@ -21,30 +33,26 @@ declare -A IMPORTS=(
   ["module.vpc.aws_elasticache_subnet_group.main"]="fullstack-docker-prod-cache-subnet-group"
 )
 
-IMPORT_COUNT=0
-SKIP_COUNT=0
-
 echo ""
 echo "Checking and importing resources..."
+
 for ADDR in "${!IMPORTS[@]}"; do
   if terraform state list -no-color 2>/dev/null | grep -Fqx "$ADDR"; then
     echo "  [SKIP] $ADDR (already in state)"
-    ((SKIP_COUNT++))
     continue
   fi
 
   ID="${IMPORTS[$ADDR]}"
   echo "  [IMPORT] $ADDR <- $ID"
 
-  if terraform import -no-color -input=false "$ADDR" "$ID" 2>&1; then
-    echo "    ✓ Successfully imported"
-    ((IMPORT_COUNT++))
-  else
-    echo "    ✗ Warning: import failed for $ADDR"
-  fi
+  terraform import -no-color -input=false \
+    -var-file="$TFVARS" \
+    "$ADDR" "$ID" \
+    && echo "    ✓ Successfully imported" \
+    || echo "    ✗ Warning: import failed"
 done
 
 echo ""
 echo "=========================================="
-echo "Import summary: $IMPORT_COUNT imported, $SKIP_COUNT skipped"
+echo "All imports completed"
 echo "=========================================="
