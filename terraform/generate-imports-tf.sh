@@ -93,7 +93,12 @@ fi
 
 # ECS cluster by name
 ECS_CLUSTER_NAME="${PROJECT_NAME}-${ENV}"
-if aws ecs describe-clusters --clusters "$ECS_CLUSTER_NAME" --region "$AWS_REGION" --query 'clusters[0].clusterArn' --output text 2>/dev/null | grep -q arn; then
+if aws ecs describe-clusters \
+      --clusters "$ECS_CLUSTER_NAME" \
+      --region "$AWS_REGION" \
+      --query 'clusters[?status==`ACTIVE`].clusterName' \
+      --output text \
+    | grep -qx "$ECS_CLUSTER_NAME"; then
   add_import "module.ecs.aws_ecs_cluster.main" "$ECS_CLUSTER_NAME"
 fi
 
