@@ -53,6 +53,7 @@ resource "aws_db_parameter_group" "postgres" {
 resource "random_password" "db_password" {
   length  = 32
   special = true
+  override_special = "!#$%^&*()-_=+{}[]:,.?" # exclude '/', '@', '"', and space
 }
 
 # Store password in Secrets Manager
