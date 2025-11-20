@@ -10,6 +10,10 @@ resource "aws_ecr_repository" "backend" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-backend-ecr"
   })
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 resource "aws_ecr_repository" "frontend" {
@@ -23,6 +27,10 @@ resource "aws_ecr_repository" "frontend" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-frontend-ecr"
   })
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 # ECR Lifecycle Policies to cleanup old images

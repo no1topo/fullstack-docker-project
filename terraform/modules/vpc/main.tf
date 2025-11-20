@@ -52,6 +52,10 @@ resource "aws_eip" "nat" {
     Name = "${var.project_name}-${var.environment}-eip-${count.index + 1}"
   })
 
+  lifecycle {
+    ignore_changes = all
+  }
+
   depends_on = [aws_internet_gateway.main]
 }
 
@@ -124,6 +128,10 @@ resource "aws_db_subnet_group" "main" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-db-subnet-group"
   })
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 # ElastiCache Subnet Group
@@ -134,6 +142,10 @@ resource "aws_elasticache_subnet_group" "main" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-cache-subnet-group"
   })
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 # Data source for availability zones

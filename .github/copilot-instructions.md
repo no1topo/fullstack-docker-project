@@ -283,6 +283,22 @@ make logs-backend      # Tail CloudWatch logs
 3. **Push → GitHub Actions CI runs**
 4. **Review & merge → CD deploys to staging/prod**
 
+### Terraform Import Workflow
+When adopting existing AWS resources:
+```bash
+cd terraform/environments/prod
+terraform plan -var-file="terraform.tfvars" -out=tfplan  # Shows resources to import
+terraform apply tfplan                                   # Imports into state
+terraform state list                                     # Verify all imported
+```
+
+### Debugging Failed Services
+```bash
+make logs-backend ENV=prod                    # CloudWatch logs
+aws ecs execute-command --cluster fullstack-docker-prod --task <task-id> --container backend --interactive --command "/bin/sh"  # Shell into running task
+terraform state show 'module.rds.aws_db_instance.postgres'  # Verify resource configuration
+```
+
 ---
 
 ## Key Patterns & Conventions
@@ -294,6 +310,14 @@ make logs-backend      # Tail CloudWatch logs
 3. **Default tags**: Common tags applied to all resources (Environment, Project, ManagedBy)
 4. **Variable validation**: Input variables have validation rules (e.g., environment ∈ {dev, staging, prod})
 5. **Outputs**: ALB DNS, log groups, RDS endpoint exported for monitoring
+6. **Import blocks** (Terraform 1.7+): Adopt existing AWS resources into state to prevent "already exists" errors
+   - 8 resources currently imported: log groups, ECR repos, parameter groups, subnet groups
+   - Import blocks in `terraform/main.tf` auto-execute before creation
+7. **Lifecycle rules**: 
+   - `prevent_destroy = true`: Critical resources (RDS, Redis, ALB, ECS cluster, services)
+   - `create_before_destroy = true`: Dependent resources (IAM roles, security groups, parameter groups)
+   - `ignore_changes = all`: Externally-managed resources (CloudWatch logs, ECR repos, subnet groups)
+   - `ignore_changes = [field_list]`: Fields managed externally (RDS password, ALB name_prefix, ECS desired_count)
 
 ### Docker Patterns
 
@@ -303,6 +327,55 @@ make logs-backend      # Tail CloudWatch logs
 2. **Non-root users**: `appuser` for security
 3. **Health checks**: `/ping` for backend, `/` for frontend
 4. **Environment variables**: Externalized for config management
+
+---
+
+## Terraform State Management (Import Blocks & Lifecycle Rules)
+
+**Problem Solved**: Terraform now fully manages AWS infrastructure without duplicate creation errors or accidental deletion.
+
+### Import Blocks (terraform/main.tf)
+Auto-adopt existing resources into state during `terraform plan`:
+- **8 existing resources imported**: CloudWatch logs (3), ECR repos (2), parameter/subnet groups (3)
+- **Workflow**: `terraform plan` detects import block → fetches from AWS → shows as "will be read" → `terraform apply` adds to state
+- **Key insight**: Prevents "Resource already exists" errors on subsequent applies
+
+### Lifecycle Rules Pattern
+All resources configured with appropriate lifecycle rules:
+```hcl
+# Critical production resources
+lifecycle {
+  prevent_destroy = true        # Blocks terraform destroy with error
+  ignore_changes  = [password]  # Externally-managed fields
+}
+
+# Dependent resources (IAM, security groups, parameter groups)
+lifecycle {
+  create_before_destroy = true  # New resource created before old destroyed
+}
+
+# Externally-managed resources
+lifecycle {
+  ignore_changes = all          # Allows adoption without conflicts
+}
+```
+
+### When Implementing Terraform Changes
+
+**For new resources**: Add appropriate lifecycle rule based on criticality
+- **Critical** (database, cache, load balancer): `prevent_destroy = true`
+- **Dependencies** (IAM roles, security groups): `create_before_destroy = true`
+- **External** (logs, ECR, managed services): `ignore_changes = all`
+
+**For resource imports**: Add import block to `terraform/main.tf` before creating in module
+```hcl
+import {
+  to = module.service.aws_resource_type.name
+  id = "aws-resource-id-from-console"
+}
+```
+
+**For modifying externally-managed fields**: Use `ignore_changes = [specific_field]` to allow Secrets Manager, Auto Scaling, or AWS naming to manage particular attributes
 
 ### Backend (Go) Patterns
 

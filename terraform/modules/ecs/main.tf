@@ -10,6 +10,12 @@ resource "aws_ecs_cluster" "main" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-cluster"
   })
+
+  # Prevent accidental deletion of cluster
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [name, setting]
+  }
 }
 
 # ECS Cluster Capacity Providers
@@ -22,5 +28,11 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
     base              = 1
     weight            = 100
     capacity_provider = "FARGATE"
+  }
+
+  # Prevent accidental deletion
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = all
   }
 }

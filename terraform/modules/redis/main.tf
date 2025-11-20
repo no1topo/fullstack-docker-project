@@ -19,6 +19,12 @@ resource "aws_elasticache_cluster" "redis" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-redis"
   })
+
+  # Prevent accidental deletion and allow reuse of existing cluster
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = all
+  }
 }
 
 # Redis Parameter Group
@@ -32,6 +38,7 @@ resource "aws_elasticache_parameter_group" "redis" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = all
   }
 }
 
@@ -49,6 +56,10 @@ resource "aws_cloudwatch_log_group" "redis" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-redis-logs"
   })
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 # Store Redis auth token in Secrets Manager

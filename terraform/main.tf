@@ -26,6 +26,7 @@ provider "aws" {
   }
 }
 
+# ============================================================================
 # VPC and Networking
 module "vpc" {
   source = "./modules/vpc"

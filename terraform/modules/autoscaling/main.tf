@@ -5,6 +5,11 @@ resource "aws_appautoscaling_target" "ecs_target" {
   resource_id        = "service/${var.cluster_name}/${var.service_name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
+
+  # Prevent accidental deletion
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # CPU-based Auto Scaling Policy

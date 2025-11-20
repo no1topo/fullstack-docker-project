@@ -49,6 +49,12 @@ resource "aws_ecs_task_definition" "main" {
   })
 
   depends_on = [var.cloudwatch_log_group]
+
+  # Prevent accidental deletion
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [family]
+  }
 }
 
 # ECS Service
@@ -78,6 +84,12 @@ resource "aws_ecs_service" "main" {
   tags = merge(var.tags, {
     Name = var.service_name
   })
+
+  # Prevent accidental deletion
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [desired_count]
+  }
 }
 
 data "aws_region" "current" {}

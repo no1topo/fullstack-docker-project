@@ -2,7 +2,7 @@
 resource "aws_db_instance" "postgres" {
   identifier              = "${var.project_name}-${var.environment}-postgres"
   engine                  = "postgres"
-  engine_version          = "13.7"
+  engine_version          = "16"
   instance_class          = var.instance_class
   allocated_storage       = var.allocated_storage
   storage_type            = "gp2"
@@ -22,12 +22,18 @@ resource "aws_db_instance" "postgres" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-postgres"
   })
+
+  # Prevent accidental deletion of database
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [password]
+  }
 }
 
 # DB Parameter Group
 resource "aws_db_parameter_group" "postgres" {
   name_prefix = "${var.project_name}-${var.environment}-"
-  family      = "postgres13"
+  family      = "postgres16"
 
   parameter {
     name  = "log_statement"

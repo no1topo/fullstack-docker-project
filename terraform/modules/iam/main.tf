@@ -16,6 +16,11 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-ecs-task-exec-role"
   })
+
+  # Allow replacement without disrupting service
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
@@ -60,6 +65,11 @@ resource "aws_iam_role" "backend_task_role" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-backend-task-role"
   })
+
+  # Replace without downtime
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # IAM Role for Frontend Tasks
@@ -80,6 +90,11 @@ resource "aws_iam_role" "frontend_task_role" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-frontend-task-role"
   })
+
+  # Replace without downtime
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # CloudWatch Logs policy for both task roles

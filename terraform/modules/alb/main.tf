@@ -11,6 +11,12 @@ resource "aws_lb" "main" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-alb"
   })
+
+  # Prevent accidental deletion of load balancer
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [name_prefix]
+  }
 }
 
 # Frontend Target Group

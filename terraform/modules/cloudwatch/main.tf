@@ -6,6 +6,10 @@ resource "aws_cloudwatch_log_group" "backend" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-backend-logs"
   })
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 resource "aws_cloudwatch_log_group" "frontend" {
@@ -15,6 +19,10 @@ resource "aws_cloudwatch_log_group" "frontend" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-frontend-logs"
   })
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 # CloudWatch Alarms for Backend CPU

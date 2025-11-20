@@ -116,7 +116,7 @@ jobs:
       - name: Terraform Apply
         if: github.event_name == 'push'
         working-directory: terraform
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve "tfplan"
 
       - name: Get ALB DNS
         id: alb
