@@ -84,7 +84,9 @@ func InitializePostgresClient() {
 			message := &Message{
 				Body: "pong",
 			}
-			pgdb.Model(message).Insert()
+			if _, err := pgdb.Model(message).Insert(); err != nil {
+				fmt.Println("[Ex 2.6+] failed to insert ping message:", err)
+			}
 			fmt.Println("[Ex 2.6+] Connection to postgres initialized, ready to ping pong.")
 			break
 		}

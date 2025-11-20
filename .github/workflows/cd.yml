@@ -98,6 +98,15 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
+      - name: Make import script executable
+        run: chmod +x ./terraform/import-existing-resources.sh
+
+      - name: Import existing AWS resources into state
+        working-directory: terraform
+        run: ../import-existing-resources.sh .
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
       - name: Terraform Init
         working-directory: terraform
         run: |
@@ -139,6 +148,19 @@ jobs:
 
           # Test frontend
           curl -s http://${{ steps.alb.outputs.dns }}/ | grep -q "<!DOCTYPE html" && echo "✓ Frontend serving correctly" || echo "✗ Frontend check failed"
+
+      - name: Rollback - Destroy infrastructure on failure
+        if: failure() && github.event_name == 'push'
+        working-directory: terraform
+        run: |
+          echo "Deployment failed. Rolling back infrastructure..."
+          terraform destroy \
+            -var-file="environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfvars" \
+            -auto-approve
+          echo "✓ Rollback complete. Infrastructure destroyed."
+        env:
+          TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
+          TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
 
   notify:
     if: always()

@@ -48,7 +48,10 @@ func CreateMessage(context *gin.Context) {
 	}
 
 	var message Message
-	context.BindJSON(&message)
+	if err := context.BindJSON(&message); err != nil {
+		context.String(400, err.Error())
+		return
+	}
 	_, err = pgdb.Model(&message).Insert()
 
 	if err != nil {
