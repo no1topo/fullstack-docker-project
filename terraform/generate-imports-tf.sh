@@ -132,6 +132,27 @@ if aws rds describe-db-instances --db-instance-identifier "$RDS_ID" --region "$A
   add_import "module.rds.aws_db_instance.postgres" "$RDS_ID"
 fi
 
+# NAT Gateway + EIP (single NAT setup)
+EIP_TAG_NAME="${PROJECT_NAME}-${ENV}-eip-1"
+EIP_ALLOC_ID=$(aws ec2 describe-addresses \
+  --region "$AWS_REGION" \
+  --filters "Name=tag:Name,Values=${EIP_TAG_NAME}" \
+  --query 'Addresses[0].AllocationId' \
+  --output text 2>/dev/null || true)
+if [[ -n "$EIP_ALLOC_ID" && "$EIP_ALLOC_ID" != "None" ]]; then
+  add_import "module.vpc.aws_eip.nat[0]" "$EIP_ALLOC_ID"
+fi
+
+NAT_TAG_NAME="${PROJECT_NAME}-${ENV}-nat-1"
+NAT_ID=$(aws ec2 describe-nat-gateways \
+  --region "$AWS_REGION" \
+  --filter "Name=tag:Name,Values=${NAT_TAG_NAME}" \
+  --query 'NatGateways[0].NatGatewayId' \
+  --output text 2>/dev/null || true)
+if [[ -n "$NAT_ID" && "$NAT_ID" != "None" ]]; then
+  add_import "module.vpc.aws_nat_gateway.main[0]" "$NAT_ID"
+fi
+
 # Write a newline at end (terraform tolerant either way)
 : > /dev/null
 
