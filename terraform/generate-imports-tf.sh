@@ -83,7 +83,7 @@ fi
 
 # Redis param/logs
 REDIS_PG="${PROJECT_NAME}-${ENV}-redis-params"
-if aws elasticache describe-parameter-groups --region "$AWS_REGION" --parameter-group-name "$REDIS_PG" >/dev/null 2>&1; then
+if aws elasticache describe-cache-parameter-groups --region "$AWS_REGION" --cache-parameter-group-name "$REDIS_PG" >/dev/null 2>&1; then
   add_import "module.redis.aws_elasticache_parameter_group.redis" "$REDIS_PG"
 fi
 REDIS_LOG="/aws/elasticache/${PROJECT_NAME}-${ENV}-redis"
