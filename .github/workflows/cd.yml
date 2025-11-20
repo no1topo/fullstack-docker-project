@@ -101,13 +101,6 @@ jobs:
       - name: Make import script executable
         run: chmod +x ./terraform/import-existing-resources.sh
 
-      - name: Import existing AWS resources into state
-        working-directory: terraform
-        run: ./import-existing-resources.sh .
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
-
       - name: Terraform Init
         working-directory: terraform
         run: |
@@ -115,6 +108,13 @@ jobs:
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
             -backend-config="key=${{ github.ref == 'refs/heads/main' && 'prod/terraform.tfstate' || 'dev/terraform.tfstate' }}" \
             -backend-config="region=${{ secrets.AWS_REGION }}"
+
+      - name: Import existing AWS resources into state
+        working-directory: terraform
+        run: ./import-existing-resources.sh .
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
       - name: Terraform Plan
         working-directory: terraform
