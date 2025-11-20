@@ -17,7 +17,7 @@ resource "aws_db_instance" "postgres" {
   multi_az                = var.environment != "dev" ? true : false
   skip_final_snapshot     = var.environment == "dev" ? true : false
   copy_tags_to_snapshot   = true
-  enable_cloudwatch_logs_exports = ["postgresql"]
+  enabled_cloudwatch_logs_exports = ["postgresql"]
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-postgres"

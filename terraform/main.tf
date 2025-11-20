@@ -116,10 +116,10 @@ module "iam" {
 module "ecs" {
   source = "./modules/ecs"
 
-  project_name                = var.project_name
-  environment                 = var.environment
-  cluster_name                = "${var.project_name}-${var.environment}"
-  container_insights_enabled  = true
+  project_name               = var.project_name
+  environment                = var.environment
+  cluster_name               = "${var.project_name}-${var.environment}"
+  cluster_insights_enabled  = true
 
   tags = var.common_tags
 }
