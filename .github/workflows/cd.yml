@@ -130,6 +130,15 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
+      - name: Apply imports (refresh-only)
+        working-directory: terraform
+        run: |
+          terraform apply -refresh-only -auto-approve -var-file="environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfvars"
+        env:
+          TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
+          TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
       - name: Terraform Plan
         working-directory: terraform
         run: terraform plan -var-file="environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfvars" -out=tfplan

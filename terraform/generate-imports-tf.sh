@@ -126,10 +126,41 @@ for item in frontend backend; do
   fi
 done
 
-# RDS instance by identifier
+# RDS instance by identifier (only if in our VPC)
 RDS_ID="${PROJECT_NAME}-${ENV}-postgres"
 if aws rds describe-db-instances --db-instance-identifier "$RDS_ID" --region "$AWS_REGION" >/dev/null 2>&1; then
-  add_import "module.rds.aws_db_instance.postgres" "$RDS_ID"
+  VPC_ID_TF=$(aws ec2 describe-vpcs \
+    --region "$AWS_REGION" \
+    --filters "Name=tag:Name,Values=${PROJECT_NAME}-${ENV}-vpc" \
+    --query 'Vpcs[0].VpcId' \
+    --output text 2>/dev/null || true)
+
+  DB_SUBNET_GRP=$(aws rds describe-db-instances \
+    --db-instance-identifier "$RDS_ID" \
+    --region "$AWS_REGION" \
+    --query 'DBInstances[0].DBSubnetGroup.DBSubnetGroupName' \
+    --output text 2>/dev/null || true)
+  RDS_VPC_ID=""
+  if [[ -n "$DB_SUBNET_GRP" && "$DB_SUBNET_GRP" != "None" ]]; then
+    FIRST_SUBNET=$(aws rds describe-db-subnet-groups \
+      --db-subnet-group-name "$DB_SUBNET_GRP" \
+      --region "$AWS_REGION" \
+      --query 'DBSubnetGroups[0].Subnets[0].SubnetIdentifier' \
+      --output text 2>/dev/null || true)
+    if [[ -n "$FIRST_SUBNET" && "$FIRST_SUBNET" != "None" ]]; then
+      RDS_VPC_ID=$(aws ec2 describe-subnets \
+        --subnet-ids "$FIRST_SUBNET" \
+        --region "$AWS_REGION" \
+        --query 'Subnets[0].VpcId' \
+        --output text 2>/dev/null || true)
+    fi
+  fi
+
+  if [[ -n "$VPC_ID_TF" && -n "$RDS_VPC_ID" && "$VPC_ID_TF" == "$RDS_VPC_ID" ]]; then
+    add_import "module.rds.aws_db_instance.postgres" "$RDS_ID"
+  else
+    echo "  [!] skip module.rds.aws_db_instance.postgres (VPC mismatch: tf=$VPC_ID_TF rds=$RDS_VPC_ID)"
+  fi
 fi
 
 # NAT Gateway + EIP (single NAT setup)
