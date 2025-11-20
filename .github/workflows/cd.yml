@@ -130,6 +130,12 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
+      - name: Show generated import blocks
+        working-directory: terraform
+        run: |
+          echo "--- imports.auto.tf ---"
+          test -f imports.auto.tf && cat imports.auto.tf || echo "(no imports.auto.tf generated)"
+
       - name: Apply imports (refresh-only)
         working-directory: terraform
         run: |

@@ -18,6 +18,11 @@ variable "backup_retention_days" {
   type = number
 }
 
+variable "storage_type" {
+  description = "RDS storage type (gp2, gp3, io1)"
+  type        = string
+}
+
 variable "vpc_security_group_ids" {
   type = list(string)
 }

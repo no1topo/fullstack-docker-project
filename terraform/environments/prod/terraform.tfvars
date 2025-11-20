@@ -29,6 +29,7 @@ rds_allocated_storage = 100
 rds_instance_class    = "db.t3.medium"
 rds_backup_retention  = 30
 rds_multi_az          = false
+rds_storage_type      = "gp3"
 
 # Redis
 redis_node_type = "cache.t3.medium"

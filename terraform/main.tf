@@ -64,6 +64,7 @@ module "rds" {
   vpc_security_group_ids = [module.security_groups.rds_sg_id]
   db_subnet_group_name   = module.vpc.db_subnet_group_name
   multi_az               = coalesce(var.rds_multi_az, var.environment != "dev")
+  storage_type           = var.rds_storage_type
 
   tags = var.common_tags
 }

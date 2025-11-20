@@ -102,6 +102,12 @@ variable "rds_backup_retention" {
   type        = number
 }
 
+variable "rds_storage_type" {
+  description = "RDS storage type (gp2, gp3, io1)"
+  type        = string
+  default     = "gp3"
+}
+
 variable "redis_node_type" {
   description = "ElastiCache node type (e.g., cache.t3.micro)"
   type        = string
