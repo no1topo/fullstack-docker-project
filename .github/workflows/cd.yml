@@ -106,6 +106,7 @@ jobs:
         run: ./import-existing-resources.sh .
         env:
           AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
       - name: Terraform Init
         working-directory: terraform
@@ -121,6 +122,7 @@ jobs:
         env:
           TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
           TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
       - name: Terraform Apply
         if: github.event_name == 'push'
