@@ -8,16 +8,14 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  TERRAFORM_VERSION: 1.6.6
+  TERRAFORM_VERSION: 1.5.0
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     outputs:
-      backend-image-uri: ${{ steps.select-backend-tag.outputs.image }}
-      frontend-image-uri: ${{ steps.select-frontend-tag.outputs.image }}
-      ecr-backend-image-uri: ${{ steps.push-ecr.outputs.backend_ecr_image }}
-      ecr-frontend-image-uri: ${{ steps.push-ecr.outputs.frontend_ecr_image }}
+      backend-image: ${{ steps.meta-backend.outputs.tags }}
+      frontend-image: ${{ steps.meta-frontend.outputs.tags }}
     permissions:
       contents: read
       packages: write
@@ -56,12 +54,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Select primary backend image tag
-        id: select-backend-tag
-        run: |
-          echo "First tag:" $(echo "${{ steps.meta-backend.outputs.tags }}" | head -n1)
-          echo "image=$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n1)" >> $GITHUB_OUTPUT
-
       - name: Extract metadata (frontend)
         id: meta-frontend
         uses: docker/metadata-action@v4
@@ -82,51 +74,6 @@ jobs:
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Select primary frontend image tag
-        id: select-frontend-tag
-        run: |
-          echo "First tag:" $(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n1)
-          echo "image=$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n1)" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS credentials (for ECR)
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
-
-      - name: Publish images to AWS ECR
-        id: push-ecr
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
-        run: |
-          set -euo pipefail
-          # Derive project name from tfvars
-          ENV_NAME=$([[ "${{ github.ref }}" == 'refs/heads/main' ]] && echo prod || echo dev)
-          PROJECT_NAME=$(sed -n "s/^\s*project_name\s*=\s*\"\(.*\)\".*/\1/p" terraform/environments/$ENV_NAME/terraform.tfvars | head -1)
-          if [ -z "$PROJECT_NAME" ]; then PROJECT_NAME=fullstack-docker; fi
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          ECR_URI="$ACCOUNT_ID.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          # Ensure repositories exist
-          aws ecr describe-repositories --repository-names "$PROJECT_NAME-backend" >/dev/null 2>&1 || aws ecr create-repository --repository-name "$PROJECT_NAME-backend" >/dev/null
-          aws ecr describe-repositories --repository-names "$PROJECT_NAME-frontend" >/dev/null 2>&1 || aws ecr create-repository --repository-name "$PROJECT_NAME-frontend" >/dev/null
-          # Login to ECR
-          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_URI"
-          # Pull GHCR images and push to ECR
-          docker pull "${{ steps.select-backend-tag.outputs.image }}"
-          docker tag  "${{ steps.select-backend-tag.outputs.image }}" "$ECR_URI/$PROJECT_NAME-backend:${{ github.sha }}"
-          docker tag  "${{ steps.select-backend-tag.outputs.image }}" "$ECR_URI/$PROJECT_NAME-backend:latest"
-          docker push "$ECR_URI/$PROJECT_NAME-backend:${{ github.sha }}"
-          docker push "$ECR_URI/$PROJECT_NAME-backend:latest"
-          docker pull "${{ steps.select-frontend-tag.outputs.image }}"
-          docker tag  "${{ steps.select-frontend-tag.outputs.image }}" "$ECR_URI/$PROJECT_NAME-frontend:${{ github.sha }}"
-          docker tag  "${{ steps.select-frontend-tag.outputs.image }}" "$ECR_URI/$PROJECT_NAME-frontend:latest"
-          docker push "$ECR_URI/$PROJECT_NAME-frontend:${{ github.sha }}"
-          docker push "$ECR_URI/$PROJECT_NAME-frontend:latest"
-          echo "backend_ecr_image=$ECR_URI/$PROJECT_NAME-backend:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "frontend_ecr_image=$ECR_URI/$PROJECT_NAME-frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
 
   deploy:
     needs: build-and-push
@@ -151,7 +98,7 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Make import generator executable
+      - name: Make import script executable
         run: chmod +x ./terraform/generate-imports-tf.sh
 
       - name: Terraform Init
@@ -162,19 +109,19 @@ jobs:
             -backend-config="key=${{ github.ref == 'refs/heads/main' && 'prod/terraform.tfstate' || 'dev/terraform.tfstate' }}" \
             -backend-config="region=${{ secrets.AWS_REGION }}"
 
-      - name: Generate Terraform import blocks (imports.auto.tf)
+      - name: Generate import blocks for existing AWS resources
         working-directory: terraform
+        run: ./generate-imports-tf.sh ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
         env:
           AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
-        run: |
-          ./generate-imports-tf.sh ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
       - name: Terraform Plan
         working-directory: terraform
         run: terraform plan -var-file="environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfvars" -out=tfplan
         env:
-          TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.ecr-backend-image-uri }}
-          TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.ecr-frontend-image-uri }}
+          TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
+          TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
       - name: Terraform Apply
@@ -204,31 +151,18 @@ jobs:
           # Test frontend
           curl -s http://${{ steps.alb.outputs.dns }}/ | grep -q "<!DOCTYPE html" && echo "✓ Frontend serving correctly" || echo "✗ Frontend check failed"
 
-      - name: Rollback - Targeted destroy of newly-created resources on failure
+      - name: Rollback - Destroy infrastructure on failure
         if: failure() && github.event_name == 'push'
         working-directory: terraform
         run: |
-          echo "Deployment failed. Performing targeted rollback..."
-          # Produce JSON plan for analysis
-          terraform show -json tfplan > tfplan.json || true
-          # Collect addresses created/replaced (exclude critical resources)
-          ADDRS=$(jq -r '
-            .resource_changes[] | select(.change.actions | index("create") or index("replace")) |
-            .address | select(
-              test("module.rds|module.redis|module.alb|module.vpc") | not
-            )' tfplan.json | xargs)
-          if [ -n "$ADDRS" ]; then
-            echo "Destroying targets: $ADDRS"
-            terraform destroy -auto-approve \
-              -var-file="environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfvars" \
-              $(printf ' -target=%s' $ADDRS)
-          else
-            echo "No safe targets to destroy. Skipping."
-          fi
-          echo "✓ Targeted rollback complete."
+          echo "Deployment failed. Rolling back infrastructure..."
+          terraform destroy \
+            -var-file="environments/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/terraform.tfvars" \
+            -auto-approve
+          echo "✓ Rollback complete. Infrastructure destroyed."
         env:
-          TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.ecr-backend-image-uri }}
-          TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.ecr-frontend-image-uri }}
+          TF_VAR_backend_image_uri: ${{ needs.build-and-push.outputs.backend-image }}
+          TF_VAR_frontend_image_uri: ${{ needs.build-and-push.outputs.frontend-image }}
 
   notify:
     if: always()
