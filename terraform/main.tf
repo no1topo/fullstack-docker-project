@@ -151,6 +151,7 @@ module "ecs_backend" {
   security_group_ids        = [module.security_groups.ecs_sg_id]
   rds_endpoint              = module.rds.endpoint
   rds_database              = module.rds.database_name
+  rds_secret_arn            = module.rds.secret_arn
   redis_endpoint            = module.redis.primary_endpoint_address
   cloudwatch_log_group      = module.cloudwatch.backend_log_group
 

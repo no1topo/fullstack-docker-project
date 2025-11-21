@@ -96,3 +96,9 @@ variable "additional_environment_variables" {
 variable "tags" {
   type = map(string)
 }
+
+variable "rds_secret_arn" {
+  description = "ARN of Secrets Manager secret containing RDS credentials (username,password,database)"
+  type        = string
+  default     = null
+}

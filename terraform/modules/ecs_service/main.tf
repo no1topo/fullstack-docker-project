@@ -1,4 +1,21 @@
 # ECS Task Definition
+locals {
+  container_secrets = var.rds_secret_arn != null ? [
+    {
+      name      = "POSTGRES_PASSWORD"
+      valueFrom = "${var.rds_secret_arn}:password::"
+    },
+    {
+      name      = "POSTGRES_USER"
+      valueFrom = "${var.rds_secret_arn}:username::"
+    },
+    {
+      name      = "POSTGRES_DATABASE"
+      valueFrom = "${var.rds_secret_arn}:database::"
+    }
+  ] : []
+}
+
 resource "aws_ecs_task_definition" "main" {
   family                   = var.task_family
   network_mode             = "awsvpc"
@@ -25,6 +42,7 @@ resource "aws_ecs_task_definition" "main" {
         "awslogs-stream-prefix" = var.service_name
       }
     }
+    secrets = local.container_secrets
     environment = concat(
       [
         {
