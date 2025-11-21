@@ -55,7 +55,7 @@ func Router() *gin.Engine {
 	router.Use(cors.New(config))
 
 	router.GET("/ping", pingpong)
-
+	router.GET("/api/ping", pingpong)
 	router.GET("/messages", controller.GetMessages)
 	router.POST("/messages", controller.CreateMessage)
 
