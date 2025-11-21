@@ -15,7 +15,7 @@ resource "aws_lb" "main" {
   # Prevent accidental deletion of load balancer
   lifecycle {
     prevent_destroy = false
-    ignore_changes  = [name_prefix]
+    ignore_changes  = [name_prefix, security_groups]
   }
 }
 
@@ -39,6 +39,9 @@ resource "aws_lb_target_group" "frontend" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-frontend-tg"
   })
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Backend Target Group
@@ -61,6 +64,9 @@ resource "aws_lb_target_group" "backend" {
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-backend-tg"
   })
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ALB Listener (HTTP on port 80)

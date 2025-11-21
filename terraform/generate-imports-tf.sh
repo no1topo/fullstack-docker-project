@@ -205,18 +205,7 @@ if aws rds describe-db-instances --db-instance-identifier "$RDS_ID" --region "$A
   fi
 fi
 
-# NAT Gateway + EIP (single NAT setup)
-EIP_TAG_NAME="${PROJECT_NAME}-${ENV}-eip-1"
-EIP_ALLOC_ID=$(aws ec2 describe-addresses \
-  --region "$AWS_REGION" \
-  --filters "Name=tag:Name,Values=${EIP_TAG_NAME}" \
-  --query 'Addresses[0].AllocationId' \
-  --output text 2>/dev/null || true)
-if [[ -n "$EIP_ALLOC_ID" && "$EIP_ALLOC_ID" != "None" ]]; then
-  add_import "module.vpc.aws_eip.nat[0]" "$EIP_ALLOC_ID"
-fi
-
-# Try to import NAT only if we can confidently resolve it in our VPC and subnet
+# Try to import NAT + EIP only if we can confidently resolve NAT in our VPC/subnet
 # VPC_ID_TF already resolved above
 
 SUBNET1_NAME_TAG="${PROJECT_NAME}-${ENV}-public-subnet-1"
@@ -234,11 +223,26 @@ if [[ -n "$VPC_ID_TF" && "$VPC_ID_TF" != "None" && -n "$SUBNET1_ID" && "$SUBNET1
     --output text 2>/dev/null || true)
   if [[ -n "$NAT_ID" && "$NAT_ID" != "None" ]]; then
     add_import "module.vpc.aws_nat_gateway.main[0]" "$NAT_ID"
+    # If NAT exists, also import its associated EIP allocation
+    EIP_ALLOC_ID=$(aws ec2 describe-nat-gateways \
+      --region "$AWS_REGION" \
+      --nat-gateway-ids "$NAT_ID" \
+      --query 'NatGateways[0].NatGatewayAddresses[0].AllocationId' \
+      --output text 2>/dev/null || true)
+    if [[ -n "$EIP_ALLOC_ID" && "$EIP_ALLOC_ID" != "None" ]]; then
+      add_import "module.vpc.aws_eip.nat[0]" "$EIP_ALLOC_ID"
+    fi
   else
     echo "  [=] skip NAT import (no NAT in VPC ${VPC_ID_TF} subnet ${SUBNET1_ID})"
   fi
 else
   echo "  [=] skip NAT import (unable to resolve VPC/subnet by tags)"
+fi
+
+# ElastiCache cluster (if exists and matches our naming)
+REDIS_CLUSTER_ID="${PROJECT_NAME}-${ENV}-redis"
+if aws elasticache describe-cache-clusters --cache-cluster-id "$REDIS_CLUSTER_ID" --region "$AWS_REGION" >/dev/null 2>&1; then
+  add_import "module.redis.aws_elasticache_cluster.redis" "$REDIS_CLUSTER_ID"
 fi
 
 # Write a newline at end (terraform tolerant either way)
