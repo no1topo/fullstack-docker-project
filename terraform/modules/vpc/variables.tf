@@ -27,3 +27,12 @@ variable "single_nat_gateway" {
 variable "tags" {
   type = map(string)
 }
+
+variable "azs" {
+  type = list(string)
+  default = [
+    "us-east-1a",
+    "us-east-1c",
+    "us-east-1d"
+  ]
+}
