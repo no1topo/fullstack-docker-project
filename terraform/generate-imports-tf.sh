@@ -70,15 +70,57 @@ for svc in backend frontend; do
   fi
 done
 
-# VPC dependent groups
+# Resolve our Terraform-managed VPC once for VPC-scoped imports
+VPC_NAME_TAG="${PROJECT_NAME}-${ENV}-vpc"
+VPC_ID_TF=$(aws ec2 describe-vpcs \
+  --region "$AWS_REGION" \
+  --filters "Name=tag:Name,Values=${VPC_NAME_TAG}" \
+  --query 'Vpcs[0].VpcId' \
+  --output text 2>/dev/null || true)
+
+# VPC dependent groups (only import if in our VPC)
 DB_SUBNET_GRP="${PROJECT_NAME}-${ENV}-db-subnet-group"
 if aws rds describe-db-subnet-groups --db-subnet-group-name "$DB_SUBNET_GRP" --region "$AWS_REGION" >/dev/null 2>&1; then
-  add_import "module.vpc.aws_db_subnet_group.main" "$DB_SUBNET_GRP"
+  DB_FIRST_SUBNET=$(aws rds describe-db-subnet-groups \
+    --db-subnet-group-name "$DB_SUBNET_GRP" \
+    --region "$AWS_REGION" \
+    --query 'DBSubnetGroups[0].Subnets[0].SubnetIdentifier' \
+    --output text 2>/dev/null || true)
+  DB_VPC_ID=""
+  if [[ -n "$DB_FIRST_SUBNET" && "$DB_FIRST_SUBNET" != "None" ]]; then
+    DB_VPC_ID=$(aws ec2 describe-subnets \
+      --subnet-ids "$DB_FIRST_SUBNET" \
+      --region "$AWS_REGION" \
+      --query 'Subnets[0].VpcId' \
+      --output text 2>/dev/null || true)
+  fi
+  if [[ -n "$VPC_ID_TF" && -n "$DB_VPC_ID" && "$VPC_ID_TF" == "$DB_VPC_ID" ]]; then
+    add_import "module.vpc.aws_db_subnet_group.main" "$DB_SUBNET_GRP"
+  else
+    echo "  [=] skip DB subnet group import (VPC mismatch: tf=$VPC_ID_TF dbsg=$DB_VPC_ID)"
+  fi
 fi
 
 CACHE_SUBNET_GRP="${PROJECT_NAME}-${ENV}-cache-subnet-group"
 if aws elasticache describe-cache-subnet-groups --cache-subnet-group-name "$CACHE_SUBNET_GRP" --region "$AWS_REGION" >/dev/null 2>&1; then
-  add_import "module.vpc.aws_elasticache_subnet_group.main" "$CACHE_SUBNET_GRP"
+  CACHE_FIRST_SUBNET=$(aws elasticache describe-cache-subnet-groups \
+    --cache-subnet-group-name "$CACHE_SUBNET_GRP" \
+    --region "$AWS_REGION" \
+    --query 'CacheSubnetGroups[0].Subnets[0].SubnetIdentifier' \
+    --output text 2>/dev/null || true)
+  CACHE_VPC_ID=""
+  if [[ -n "$CACHE_FIRST_SUBNET" && "$CACHE_FIRST_SUBNET" != "None" ]]; then
+    CACHE_VPC_ID=$(aws ec2 describe-subnets \
+      --subnet-ids "$CACHE_FIRST_SUBNET" \
+      --region "$AWS_REGION" \
+      --query 'Subnets[0].VpcId' \
+      --output text 2>/dev/null || true)
+  fi
+  if [[ -n "$VPC_ID_TF" && -n "$CACHE_VPC_ID" && "$VPC_ID_TF" == "$CACHE_VPC_ID" ]]; then
+    add_import "module.vpc.aws_elasticache_subnet_group.main" "$CACHE_SUBNET_GRP"
+  else
+    echo "  [=] skip Cache subnet group import (VPC mismatch: tf=$VPC_ID_TF cache=$CACHE_VPC_ID)"
+  fi
 fi
 
 # Redis param/logs
@@ -175,12 +217,7 @@ if [[ -n "$EIP_ALLOC_ID" && "$EIP_ALLOC_ID" != "None" ]]; then
 fi
 
 # Try to import NAT only if we can confidently resolve it in our VPC and subnet
-VPC_NAME_TAG="${PROJECT_NAME}-${ENV}-vpc"
-VPC_ID_TF=$(aws ec2 describe-vpcs \
-  --region "$AWS_REGION" \
-  --filters "Name=tag:Name,Values=${VPC_NAME_TAG}" \
-  --query 'Vpcs[0].VpcId' \
-  --output text 2>/dev/null || true)
+# VPC_ID_TF already resolved above
 
 SUBNET1_NAME_TAG="${PROJECT_NAME}-${ENV}-public-subnet-1"
 SUBNET1_ID=$(aws ec2 describe-subnets \
