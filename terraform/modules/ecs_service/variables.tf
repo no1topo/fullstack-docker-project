@@ -97,3 +97,9 @@ variable "rds_secret_arn" {
   type        = string
   default     = null
 }
+
+variable "redis_endpoint" {
+  description = "The primary endpoint address for the ElastiCache Redis cluster."
+  type        = string
+  default     = null
+}
