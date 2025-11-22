@@ -76,11 +76,6 @@ variable "rds_database" {
   default = null
 }
 
-variable "redis_endpoint" {
-  type    = string
-  default = null
-}
-
 variable "cloudwatch_log_group" {
   type = string
 }
