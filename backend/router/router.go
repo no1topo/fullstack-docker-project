@@ -56,8 +56,8 @@ func Router() *gin.Engine {
 
 	router.GET("/ping", pingpong)
 	router.GET("/api/ping", pingpong)
-	router.GET("/messages", controller.GetMessages)
-	router.POST("/messages", controller.CreateMessage)
+	router.GET("/api/messages", controller.GetMessages)
+	router.POST("/api/messages", controller.CreateMessage)
 
 	router.NoRoute(func(context *gin.Context) {
 		path := context.Request.URL.Path
