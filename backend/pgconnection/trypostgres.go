@@ -40,8 +40,11 @@ func TryPostgres() (bool, error) {
 		Select()
 
 	if err != nil {
-		fmt.Println(err)
-		return false, errors.New("No postgres, check backend output for additional info")
+		// fmt.Println(err)
+		// return false, errors.New("No postgres, check backend output for additional info")
+		log.Printf("Postgres query error: %v", err)
+		return false, fmt.Errorf("postgres error: %w", err)
+
 	}
 
 	fmt.Println(message)
