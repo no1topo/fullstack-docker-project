@@ -130,7 +130,7 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
       ]
       # Set the ARN specifically to your secrets for best security practice.
       # Using a dynamic resource pattern is safer than "*".
-      Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret/*"
+      Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:*/*"
     }]
   })
 }
