@@ -114,3 +114,26 @@ resource "aws_iam_role_policy" "cloudwatch_logs" {
     }]
   })
 }
+
+# IAM Policy for Secrets Manager (Needed for Execution Role to pull DB password)
+resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
+  name_prefix = "${var.project_name}-secrets-"
+  role        = aws_iam_role.ecs_task_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ]
+      # Set the ARN specifically to your secrets for best security practice.
+      # Using a dynamic resource pattern is safer than "*".
+      Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret/*"
+    }]
+  })
+}
+
+# Add this data block needed for the Resource ARN above
+data "aws_caller_identity" "current" {}
