@@ -47,7 +47,11 @@ resource "aws_ecs_task_definition" "main" {
       [
         {
           name  = "POSTGRES_HOST"
-          value = var.rds_endpoint_address != null ? var.rds_endpoint_address : ""
+          value = var.rds_endpoint != null ? var.rds_endpoint : ""
+        },
+        {
+          name  = "POSTGRES_PORT"
+          value = var.rds_port != null ? var.rds_port : "5432"
         },
         {
           name  = "REDIS_HOST"
