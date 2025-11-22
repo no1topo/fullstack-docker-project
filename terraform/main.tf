@@ -149,7 +149,7 @@ module "ecs_backend" {
   vpc_id                    = module.vpc.vpc_id
   private_subnet_ids        = module.vpc.private_subnet_ids
   security_group_ids        = [module.security_groups.ecs_sg_id]
-  rds_endpoint              = module.rds.endpoint
+  rds_endpoint_address      = module.rds.endpoint
   rds_port                  = module.rds.rds_port
   rds_database              = module.rds.database_name
   rds_secret_arn            = module.rds.secret_arn

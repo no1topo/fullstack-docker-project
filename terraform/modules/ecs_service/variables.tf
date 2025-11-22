@@ -66,7 +66,7 @@ variable "security_group_ids" {
   type = list(string)
 }
 
-variable "rds_endpoint" {
+variable "rds_endpoint_address" {
   type    = string
   default = null
 }
