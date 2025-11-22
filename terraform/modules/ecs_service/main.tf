@@ -47,7 +47,7 @@ resource "aws_ecs_task_definition" "main" {
       [
         {
           name  = "POSTGRES_HOST"
-          value = var.rds_endpoint != null ? var.rds_endpoint : ""
+          value = var.rds_endpoint_address != null ? var.rds_endpoint_address : ""
         },
         {
           name  = "REDIS_HOST"
