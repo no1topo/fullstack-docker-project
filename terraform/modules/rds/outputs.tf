@@ -16,5 +16,5 @@ output "secret_arn" {
 
 output "rds_port" {
   # Port number only
-  value = aws_db_instance.main.port
+  value = aws_db_instance.postgres.port
 }
