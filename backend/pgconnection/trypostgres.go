@@ -2,7 +2,7 @@ package pgconnection
 
 import (
 	"context"
-	"errors"
+	// "errors"
 	"fmt"
 	"os"
 	"server/common"
