@@ -9,13 +9,13 @@ terraform {
   }
 
   # Uncomment for remote state (use S3 + DynamoDB for production)
-  # backend "s3" {
-  #   bucket         = "fullstack-docker-terraform-state-962495091047"
-  #   key            = "fullstack-docker/dev/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   encrypt        = true
-  #   dynamodb_table = "terraform-locks"
-  # }
+   backend "s3" {
+     bucket         = "fullstack-docker-terraform-state-962495091047"
+     # key            = "fullstack-docker/dev/terraform.tfstate"
+     region         = "us-east-1"
+     encrypt        = true
+     dynamodb_table = "terraform-locks"
+   }
 }
 
 provider "aws" {
