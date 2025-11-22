@@ -22,9 +22,18 @@ type Message struct {
 
 // createSchema creates database schema for User and Story models.
 func createSchema() error {
-	err := pgdb.Model((*Message)(nil)).CreateTable(&orm.CreateTableOptions{
-		Temp: true,
-	})
+	// err := pgdb.Model((*Message)(nil)).CreateTable(&orm.CreateTableOptions{
+	// 	Temp: true,
+	// })
+	// ✅ FIX: Use raw SQL to reliably create the table if it doesn't exist.
+    // This bypasses potential ORM/transaction rollback issues during startup.
+    _, err := pgdb.Exec(`
+        CREATE TABLE IF NOT EXISTS messages (
+            id BIGSERIAL PRIMARY KEY, 
+            body TEXT
+        );
+    `)
+    return err
 	return err
 }
 
