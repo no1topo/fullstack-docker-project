@@ -40,6 +40,11 @@ resource "aws_db_parameter_group" "postgres" {
     value = "all"
   }
 
+  parameter {
+    name  = "rds.force_ssl"
+    value = "0"
+  }
+
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-pg-params"
   })

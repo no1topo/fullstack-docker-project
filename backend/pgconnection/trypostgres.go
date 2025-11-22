@@ -2,7 +2,6 @@ package pgconnection
 
 import (
 	"context"
-	"crypto/tls"
 	// "errors"
 	"fmt"
 	"os"
@@ -78,9 +77,6 @@ func InitializePostgresClient() {
 		Password: postgresPassword,
 		Database: postgresDatabase,
 
-		TLSConfig: &tls.Config{
-            InsecureSkipVerify: true, 
-        },
 	})
 
 	for i := 0; i <= 4; i++ {
