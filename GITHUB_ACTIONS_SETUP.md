@@ -366,14 +366,33 @@ aws dynamodb delete-item \
 
 ### ECR Login Fails in GitHub Actions
 
-```bash
-# Verify ECR repository exists
-aws ecr describe-repositories --repository-names fullstack-docker-backend
+The ECR repositories are automatically created by Terraform when you run `terraform apply`. If you encounter login issues:
 
-# Create if missing
-aws ecr create-repository --repository-name fullstack-docker-backend
-aws ecr create-repository --repository-name fullstack-docker-frontend
+```bash
+# Verify ECR repositories exist
+aws ecr describe-repositories --repository-names fullstack-docker-backend fullstack-docker-frontend
+
+# If missing, apply Terraform first to create them
+cd terraform/environments/dev
+terraform apply
+
+# Repositories created by Terraform:
+# - fullstack-docker-backend (with lifecycle policy, scan on push)
+# - fullstack-docker-frontend (with lifecycle policy, scan on push)
 ```
+
+## Container Registry (ECR)
+
+**Important**: This project uses **AWS Elastic Container Registry (ECR)** for Docker images. The Terraform ECR module automatically creates:
+- `fullstack-docker-backend` repository
+- `fullstack-docker-frontend` repository
+
+Both repositories have:
+- Image scanning on push enabled
+- Lifecycle policies (keeps last 10 images, removes older ones)
+- Automatic cleanup of untagged images
+
+Images are pushed during the CD workflow with git SHA tags (e.g., `abc123def456`), and ECS task definitions reference these ECR URIs.
 
 ## Monitoring & Alerts
 

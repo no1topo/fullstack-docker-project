@@ -59,6 +59,8 @@ This document describes the production-grade AWS infrastructure setup using Terr
 - **Health Checks**:
   - Frontend: GET `/` expecting 200
   - Backend: GET `/ping` expecting 200
+    - Advanced: `/ping?redis=true` checks Redis connectivity
+    - Advanced: `/ping?postgres=true` checks PostgreSQL connectivity
 
 ### 4. **RDS PostgreSQL**
 - **Version**: 13.7 (upgradeable)
@@ -163,6 +165,7 @@ terraform/
 2. Terraform 1.0+
 3. Docker for building images
 4. GitHub repository with Actions enabled
+5. **S3 backend configured**: The project is already configured to use S3 + DynamoDB for state. See `terraform/main.tf` backend block.
 
 ### Local Deployment (Dev)
 
@@ -194,14 +197,15 @@ terraform output
    - Security scanning (Trivy)
 
 2. **CD** (`.github/workflows/cd.yml`):
-   - Build Docker images
-   - Push to ECR
-   - Terraform plan/apply
-   - Smoke tests (health checks)
-   - Deployment notifications
+   - Build Docker images (multi-stage builds)
+   - Push to AWS ECR with git SHA tags
+   - Terraform plan/apply (passes ECR image URIs via TF_VAR_*)
+   - ECS updates task definitions and performs rolling deployment
+   - Smoke tests (ALB health checks)
 
 **Secrets required** in GitHub:
-- `AWS_ROLE_ARN`: IAM role for OIDC federation
+- `AWS_ACCESS_KEY_ID`: AWS access key for authentication
+- `AWS_SECRET_ACCESS_KEY`: AWS secret access key
 - `AWS_REGION`: AWS region (default: us-east-1)
 - `TF_STATE_BUCKET`: S3 bucket for Terraform state
 
@@ -218,6 +222,22 @@ terraform output
 3. **Scheduled Scaling**: Scale down during off-hours (not implemented yet)
 4. **RDS Backup**: Adjust retention policy to balance cost vs. recovery
 5. **Log Retention**: Set appropriate CloudWatch retention (default: 7 days)
+
+### Local Development (Docker Compose)
+
+```bash
+# Start full stack (frontend, backend, postgres, redis, nginx)
+docker-compose up --build
+
+# Services and dependencies:
+# - backend depends_on postgres and redis (Docker DNS resolution)
+# - nginx routes / to frontend:5000 and /api/ to backend:8080
+# - postgres data persists in named volume 'database'
+
+# Test endpoints
+curl http://localhost/            # Frontend via nginx
+curl http://localhost/api/ping    # Backend via nginx
+```
 
 ### Estimated Monthly Costs (Dev Environment)
 - ECS Fargate (2x micro): ~$15

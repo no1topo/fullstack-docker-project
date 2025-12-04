@@ -21,7 +21,7 @@ Your fullstack Docker project has been transformed into an **enterprise-grade De
   - IAM Roles (task execution, task permissions)
   - CloudWatch (logs, alarms, container insights)
   - Auto Scaling (CPU/memory-based with target tracking)
-  - ECR (image repositories with lifecycle policies)
+  - ECR (image repositories with lifecycle policies, auto-cleanup old images)
 
 - **Environment configurations** for dev/staging/prod:
   - `terraform/environments/dev/terraform.tfvars`
@@ -45,11 +45,12 @@ Your fullstack Docker project has been transformed into an **enterprise-grade De
   - CodeCov integration for coverage tracking
 
 - **CD Workflow** (`cd.yml`): Runs on merge to main/develop
-  - Build Docker images with Docker buildx
-  - Push to ECR with smart tagging (branch + git SHA)
-  - Terraform plan & apply with auto-approval
+  - Build Docker images with Docker buildx (multi-stage builds)
+  - Push to AWS Elastic Container Registry (ECR) with git SHA tagging
+  - Terraform plan & apply (passes ECR image URIs via TF_VAR_*)
+  - ECS pulls images from ECR and performs rolling deployment
   - Smoke tests (wait for ALB health + endpoint tests)
-  - OIDC federation with AWS (no long-lived credentials!)
+  - Frontend build-time config: REACT_APP_BACKEND_URL must be set during build
 
 ### 3. **Complete Documentation** ✅
 **Location**: Root directory

@@ -14,7 +14,7 @@ Your fullstack Docker project has been transformed into an **enterprise-grade De
 - ✅ **Multi-AZ high availability** - Distributed across 2 availability zones
 - ✅ **Security first** - Least-privilege IAM, encrypted storage, security groups
 - ✅ **Cost optimized** - Environment-specific sizing (~$70-250/month depending on environment)
-- ✅ **Ready for remote state** - S3 + DynamoDB backend configuration
+- ✅ **Remote state configured** - S3 + DynamoDB backend already configured in `terraform/main.tf`
 
 ### CI/CD Pipeline (GitHub Actions)
 - ✅ **Automated CI on PR** - Lint, test, security scan, Terraform validate
@@ -54,7 +54,8 @@ Your fullstack Docker project has been transformed into an **enterprise-grade De
 # 1. Show local development (works without AWS)
 make docker-compose-up
 curl http://localhost:5000       # Frontend
-curl http://localhost:8080/ping  # Backend
+curl http://localhost:8080/ping  # Backend basic health
+curl "http://localhost:8080/ping?redis=true&postgres=true"  # Backend with dependencies
 
 # 2. Show code quality automation
 make fmt lint test              # Automatically formats and tests
@@ -79,12 +80,14 @@ make logs-backend               # Show CloudWatch integration
 - "Each module handles a specific AWS service (VPC, ECS, RDS, etc.)"
 - "Environment configs are in tfvars - identical code, different parameters"
 - "Multi-AZ deployment with NAT gateways for high availability"
+- "Docker Compose uses nginx for path-based routing (/ → frontend, /api/ → backend)"
 
 **On CI/CD:**
 - "GitHub Actions automatically tests on every PR with lint, unit tests, and security scanning"
-- "Images are built with multi-stage Docker builds for minimal size"
-- "Using OIDC federation - no AWS credentials stored in GitHub secrets"
-- "Terraform plan is reviewed before apply for safety"
+- "Images are built with multi-stage Docker builds for minimal size (Go uses scratch base)"
+- "Images pushed to AWS ECR, then ECS pulls from ECR for deployment"
+- "Terraform receives ECR image URIs and updates ECS task definitions"
+- "Backend uses go-pg ORM with struct models (e.g., Message struct with JSON tags)"
 
 **On Observability:**
 - "All container logs go to CloudWatch with automatic retention policies"

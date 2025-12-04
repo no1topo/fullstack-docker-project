@@ -80,7 +80,7 @@ TF_STATE_BUCKET    = your-terraform-state-bucket
 
 ```bash
 git push origin main      # Deploys to production
-git push origin develop   # Deploys to staging
+git push origin develop   # Deploys to dev environment
 ```
 
 #### 4. Or Deploy Manually
@@ -131,9 +131,9 @@ make tf-destroy ENV=dev
    - Security scanning (Trivy)
 
 2. **Build & Deploy** (`.github/workflows/cd.yml`):
-   - Build Docker images
-   - Push to ECR
-   - Terraform plan/apply
+   - Build Docker images (multi-stage builds)
+   - Push to AWS Elastic Container Registry (ECR)
+   - Terraform plan/apply (updates ECS task definitions with new ECR image URIs)
    - Smoke tests (health checks)
 
 ```bash
@@ -299,6 +299,7 @@ fullstack-docker-project/
 │   ├── app.go
 │   ├── Dockerfile             # Multi-stage production build
 │   ├── router/
+│   │   └── router.go          # Route definitions, CORS config (REQUEST_ORIGIN env var)
 │   ├── controller/
 │   ├── cache/
 │   └── pgconnection/
@@ -306,6 +307,7 @@ fullstack-docker-project/
 │   ├── src/
 │   ├── public/
 │   ├── Dockerfile             # Multi-stage production build
+│   │                          # CRITICAL: REACT_APP_BACKEND_URL must be set during build, not runtime!
 │   └── package.json
 ├── nginx.conf                 # Reverse proxy (local dev only)
 ├── docker-compose.yml         # Local development stack
@@ -328,6 +330,13 @@ fullstack-docker-project/
 - [ ] Least-privilege IAM policies reviewed
 
 ## 🚨 Troubleshooting
+
+### Common Pitfalls
+
+1. **Frontend build-time vars**: `REACT_APP_*` environment variables must be set during `npm run build`, not at container runtime
+2. **CORS origin mismatch**: Backend `REQUEST_ORIGIN` env var must match frontend URL (e.g., `http://localhost` for local dev)
+3. **Path routing**: When accessing backend via ALB, routes require `/api` prefix (e.g., `/api/ping` not `/ping`)
+4. **Docker build context**: Backend and frontend Dockerfiles assume build context is `./backend/` or `./frontend/`, not repo root
 
 ### Services Not Reaching Healthy State
 

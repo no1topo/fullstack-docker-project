@@ -112,7 +112,7 @@
 
 3. Merge to Develop or Main
    └─ git merge feature/my-feature --squash
-      └─ git push origin develop  # Deploy to Staging
+      └─ git push origin develop  # Deploy to dev (not staging)
          OR
       └─ git push origin main     # Deploy to Production
 
@@ -120,19 +120,22 @@
 │ CD WORKFLOW (.github/workflows/cd.yml)  [RUNS ON MERGE TO main/develop]     │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│ STAGE 1: Build & Push to ECR                                                │
+│ STAGE 1: Build & Push to AWS ECR                                            │
 │ ┌────────────────────────────────────────────────────────────────────────┐  │
-│ │ 1. Set up Docker Buildx (multi-platform)                              │  │
-│ │ 2. Login to GitHub Container Registry (ghcr.io)                       │  │
+│ │ 1. Configure AWS credentials                                          │  │
+│ │ 2. Login to Amazon ECR                                                │  │
 │ │ 3. Build Backend Image                                                │  │
 │ │    - Multi-stage: compile Go → minimal scratch runtime                │  │
-│ │    - Tag: ghcr.io/repo/backend:branch-{git_sha}                       │  │
-│ │    - Push to registry                                                 │  │
+│ │    - Tag: <account>.dkr.ecr.us-east-1.amazonaws.com/                  │  │
+│ │           fullstack-docker-backend:{git_sha}                          │  │
+│ │    - Push to ECR                                                      │  │
 │ │ 4. Build Frontend Image                                               │  │
 │ │    - Multi-stage: Node build → Alpine runtime                         │  │
-│ │    - Tag: ghcr.io/repo/frontend:branch-{git_sha}                      │  │
-│ │    - Push to registry                                                 │  │
-│ │ ✓ Images pushed                                                       │  │
+│ │    - CRITICAL: REACT_APP_BACKEND_URL set during build (not runtime!)  │  │
+│ │    - Tag: <account>.dkr.ecr.us-east-1.amazonaws.com/                  │  │
+│ │           fullstack-docker-frontend:{git_sha}                         │  │
+│ │    - Push to ECR                                                      │  │
+│ │ ✓ Images pushed to AWS ECR                                            │  │
 │ └────────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
 │ STAGE 2: Terraform Plan & Apply                                             │
@@ -140,8 +143,8 @@
 │ │ 1. Configure AWS Credentials (OIDC Federation)                         │  │
 │ │ 2. Set up Terraform (version 1.5.0)                                    │  │
 │ │ 3. Select Environment:                                                 │  │
-│ │    - develop branch → staging environment                              │  │
-│ │    - main branch → production environment                              │  │
+│ │    - develop branch → dev environment                                  │  │
+│ │    - main branch → prod environment                                    │  │
 │ │ 4. Terraform Init (download providers, initialize state)               │  │
 │ │ 5. Terraform Plan (show what will change)                              │  │
 │ │ 6. Review Plan (manual approval for prod - optional)                   │  │
@@ -267,8 +270,9 @@ REQUEST PATH: User visits http://example.com/api/messages
 │ 4. ECS Fargate Task (Go Backend)                                 │
 │    ├─ Container: fullstack-docker-backend:latest                │
 │    ├─ Port: 8080                                                 │
-│    ├─ Handler: GET /messages                                     │
-│    │  └─ Gin router processes request                            │
+│    ├─ Handler: GET /api/messages (via Gin router)               │
+│    │  └─ Routes support both /ping and /api/ping                │
+│    │  └─ CORS configured via REQUEST_ORIGIN env var             │
 │    └─ Environment Variables:                                     │
 │       ├─ POSTGRES_HOST=rds-endpoint                              │
 │       ├─ REDIS_HOST=elasticache-endpoint                         │
