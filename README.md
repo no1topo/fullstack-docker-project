@@ -682,9 +682,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👤 Author
 
 **Your Name**  
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
-- Email: your.email@example.com
+- GitHub: [@no1topo](https://github.com/no1topo)
+- LinkedIn: [Aheed Khan](https://linkedin.com/in/aheed-khan-02935b21b)
+- Email: khan.aheed@gmail.com
 
 ---
 
@@ -720,3 +720,4 @@ This project demonstrates:
 Made with ❤️ for DevOps Engineers & Cloud Architects
 
 </div>
+
